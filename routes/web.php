@@ -7,9 +7,46 @@ use App\Http\Controllers\SecurityController;
 use Illuminate\Support\Facades\Route;
 use Laravel\Fortify\Features;
 
-Route::inertia('/', 'welcome', [
-    'canRegister' => Features::enabled(Features::registration()),
-])->name('home');
+use App\Models\User;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Auth\Events\Verified;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Inertia\Inertia;
+
+Route::get('/', function () {
+    if (Auth::check()) {
+        return redirect()->route('dashboard');
+    }
+
+    return Inertia::render('welcome', [
+        'canRegister' => Features::enabled(Features::registration()),
+    ]);
+})->name('home');
+
+Route::get('/email/verify/{id}/{hash}', function (Request $request, string $id, string $hash) {
+    /** @var User $user */
+    $user = User::findOrFail($id);
+
+    if (Auth::check() && ! hash_equals((string) Auth::id(), (string) $id)) {
+        throw new AuthorizationException('Esta cuenta no coincide con el usuario autenticado.');
+    }
+
+    if (! hash_equals((string) $hash, sha1($user->getEmailForVerification()))) {
+        throw new AuthorizationException('Enlace de verificación inválido.');
+    }
+
+    if (! $user->hasVerifiedEmail()) {
+        $user->markEmailAsVerified();
+        event(new Verified($user));
+    }
+
+    if (! Auth::check()) {
+        Auth::login($user);
+    }
+
+    return redirect()->route('dashboard', ['verified' => 1]);
+})->middleware(['signed', 'throttle:6,1'])->name('verification.verify');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::inertia('dashboard', 'dashboard')->name('dashboard');

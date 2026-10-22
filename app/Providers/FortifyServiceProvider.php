@@ -4,8 +4,10 @@ namespace App\Providers;
 
 use App\Actions\Fortify\CreateNewUser;
 use App\Actions\Fortify\ResetUserPassword;
+use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
+use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
@@ -31,6 +33,7 @@ class FortifyServiceProvider extends ServiceProvider
         $this->configureActions();
         $this->configureViews();
         $this->configureRateLimiting();
+        $this->configureEmailVerification();
     }
 
     /**
@@ -86,6 +89,25 @@ class FortifyServiceProvider extends ServiceProvider
             $throttleKey = Str::transliterate(Str::lower($request->input(Fortify::username())).'|'.$request->ip());
 
             return Limit::perMinute(5)->by($throttleKey);
+        });
+    }
+
+    /**
+     * Configure email verification notification message in Spanish.
+     */
+    private function configureEmailVerification(): void
+    {
+        VerifyEmail::toMailUsing(function (object $notifiable, string $url) {
+            $name = $notifiable->name ?: 'Usuario';
+
+            return (new MailMessage)
+                ->subject('Verifica tu correo electrónico - CEIBA System')
+                ->greeting("¡Hola, {$name}!")
+                ->line('Gracias por registrarte en CEIBA System. Para completar tu registro y activar tu cuenta, por favor confirma tu dirección de correo electrónico haciendo clic en el siguiente botón:')
+                ->action('Verificar correo electrónico', $url)
+                ->line('Este enlace de verificación expirará en 60 minutos.')
+                ->line('Si no has creado una cuenta en CEIBA System, puedes ignorar este mensaje de forma segura.')
+                ->salutation("Saludos cordiales,\nEl equipo de CEIBA");
         });
     }
 }
