@@ -106,4 +106,28 @@ class OAuthTest extends TestCase
         $response->assertSessionHasErrors(['email']);
         $this->assertGuest();
     }
+
+    public function test_microsoft_callback_redirects_to_two_factor_challenge_when_user_has_two_factor_enabled(): void
+    {
+        $existingUser = User::factory()->sso()->withTwoFactor()->create([
+            'email' => 'twofactor@example.com',
+            'microsoft_id' => 'ms-2fa-user',
+        ]);
+
+        $socialiteUser = new SocialiteUser;
+        $socialiteUser->id = 'ms-2fa-user';
+        $socialiteUser->name = '2FA User';
+        $socialiteUser->email = 'twofactor@example.com';
+
+        $provider = Mockery::mock('Laravel\Socialite\Two\AbstractProvider');
+        $provider->shouldReceive('user')->once()->andReturn($socialiteUser);
+
+        Socialite::shouldReceive('driver')->with('microsoft')->andReturn($provider);
+
+        $response = $this->get('/auth/microsoft/callback');
+
+        $response->assertRedirect(route('two-factor.login'));
+        $this->assertGuest();
+        $this->assertEquals($existingUser->id, session('login.id'));
+    }
 }

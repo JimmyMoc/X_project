@@ -55,4 +55,12 @@ class User extends Authenticatable implements MustVerifyEmail
             'two_factor_confirmed_at' => 'datetime',
         ];
     }
+
+    /**
+     * Determine if the user is authenticated or registered via Single Sign-On (SSO).
+     */
+    public function isSso(): bool
+    {
+        return ! empty($this->microsoft_id);
+    }
 }

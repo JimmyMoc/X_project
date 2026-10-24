@@ -59,4 +59,30 @@ class PasswordUpdateTest extends TestCase
             ->assertSessionHasErrors('current_password')
             ->assertRedirect(route('user-password.edit'));
     }
+
+    public function test_sso_users_are_redirected_away_from_password_update_page()
+    {
+        $user = User::factory()->sso()->create();
+
+        $response = $this
+            ->actingAs($user)
+            ->get(route('user-password.edit'));
+
+        $response->assertRedirect(route('profile.edit'));
+    }
+
+    public function test_sso_users_cannot_update_password()
+    {
+        $user = User::factory()->sso()->create();
+
+        $response = $this
+            ->actingAs($user)
+            ->put(route('user-password.update'), [
+                'current_password' => 'password',
+                'password' => 'new-password',
+                'password_confirmation' => 'new-password',
+            ]);
+
+        $response->assertForbidden();
+    }
 }

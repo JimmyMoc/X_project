@@ -81,4 +81,59 @@ class TwoFactorAuthenticationTest extends TestCase
             ->get(route('two-factor.show'))
             ->assertForbidden();
     }
+
+    public function test_sso_users_can_access_two_factor_settings_without_password_confirmation()
+    {
+        $this->skipUnlessFortifyFeature(Features::twoFactorAuthentication());
+
+        Features::twoFactorAuthentication([
+            'confirm' => true,
+            'confirmPassword' => true,
+        ]);
+
+        $user = User::factory()->sso()->create();
+
+        $this->actingAs($user)
+            ->get(route('two-factor.show'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('settings/two-factor')
+                ->where('twoFactorEnabled', false),
+            );
+    }
+
+    public function test_sso_users_can_enable_two_factor_authentication_without_password_confirmation()
+    {
+        $this->skipUnlessFortifyFeature(Features::twoFactorAuthentication());
+
+        Features::twoFactorAuthentication([
+            'confirm' => true,
+            'confirmPassword' => true,
+        ]);
+
+        $user = User::factory()->sso()->create();
+
+        $this->actingAs($user)
+            ->post(route('two-factor.enable'))
+            ->assertRedirect();
+
+        $this->assertNotNull($user->fresh()->two_factor_secret);
+    }
+
+    public function test_sso_users_can_fetch_qr_code_without_password_confirmation()
+    {
+        $this->skipUnlessFortifyFeature(Features::twoFactorAuthentication());
+
+        Features::twoFactorAuthentication([
+            'confirm' => true,
+            'confirmPassword' => true,
+        ]);
+
+        $user = User::factory()->sso()->withTwoFactor()->create();
+
+        $this->actingAs($user)
+            ->getJson(route('two-factor.qr-code'))
+            ->assertOk()
+            ->assertJsonStructure(['svg']);
+    }
 }

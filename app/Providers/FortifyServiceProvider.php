@@ -73,7 +73,13 @@ class FortifyServiceProvider extends ServiceProvider
 
         Fortify::twoFactorChallengeView(fn () => Inertia::render('auth/two-factor-challenge'));
 
-        Fortify::confirmPasswordView(fn () => Inertia::render('auth/confirm-password'));
+        Fortify::confirmPasswordView(function (Request $request) {
+            if ($request->user() && (! empty($request->user()->microsoft_id) || $request->session()->get('auth_via_sso', false))) {
+                return redirect()->intended(route('dashboard'));
+            }
+
+            return Inertia::render('auth/confirm-password');
+        });
     }
 
     /**

@@ -96,4 +96,30 @@ class ProfileUpdateTest extends TestCase
 
         $this->assertNotNull($user->fresh());
     }
+
+    public function test_sso_status_is_shared_with_inertia_for_sso_users()
+    {
+        $ssoUser = User::factory()->sso()->create();
+
+        $this->actingAs($ssoUser)
+            ->get(route('profile.edit'))
+            ->assertOk()
+            ->assertInertia(fn (\Inertia\Testing\AssertableInertia $page) => $page
+                ->component('settings/profile')
+                ->where('auth.user.is_sso', true)
+            );
+    }
+
+    public function test_sso_status_is_false_for_regular_users()
+    {
+        $regularUser = User::factory()->create();
+
+        $this->actingAs($regularUser)
+            ->get(route('profile.edit'))
+            ->assertOk()
+            ->assertInertia(fn (\Inertia\Testing\AssertableInertia $page) => $page
+                ->component('settings/profile')
+                ->where('auth.user.is_sso', false)
+            );
+    }
 }

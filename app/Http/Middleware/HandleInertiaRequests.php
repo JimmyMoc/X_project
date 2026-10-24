@@ -48,6 +48,7 @@ class HandleInertiaRequests extends Middleware
                     'avatar' => $user->avatar ?? null,
                     'email_verified_at' => $user->email_verified_at,
                     'two_factor_enabled' => ! is_null($user->two_factor_secret),
+                    'is_sso' => ! empty($user->microsoft_id) || (bool) $request->session()->get('auth_via_sso', false),
                     'created_at' => $user->created_at?->toISOString() ?? (string) $user->created_at,
                     'updated_at' => $user->updated_at?->toISOString() ?? (string) $user->updated_at,
                     'roles' => $user->getRoleNames()->values()->all(),

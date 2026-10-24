@@ -57,4 +57,14 @@ class UserFactory extends Factory
             'two_factor_confirmed_at' => now(),
         ]);
     }
+
+    /**
+     * Indicate that the user is an SSO account.
+     */
+    public function sso(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'microsoft_id' => 'ms_'.fake()->unique()->uuid(),
+        ]);
+    }
 }

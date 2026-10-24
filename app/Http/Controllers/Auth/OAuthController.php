@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use Laravel\Fortify\Events\TwoFactorAuthenticationChallenged;
 use Laravel\Socialite\Facades\Socialite;
 use Spatie\Permission\Models\Role;
 use Symfony\Component\HttpFoundation\RedirectResponse as SymfonyRedirectResponse;
@@ -97,8 +98,23 @@ class OAuthController extends Controller
                 }
             }
 
+            // Si el usuario tiene MFA activado en el sistema, iniciar el flujo de desafío 2FA
+            if ($user->hasEnabledTwoFactorAuthentication()) {
+                $request->session()->put([
+                    'login.id' => $user->getKey(),
+                    'login.remember' => true,
+                    'auth_via_sso' => true,
+                ]);
+
+                TwoFactorAuthenticationChallenged::dispatch($user);
+
+                return redirect()->route('two-factor.login');
+            }
+
             Auth::login($user, remember: true);
             $request->session()->regenerate();
+            $request->session()->put('auth_via_sso', true);
+            $request->session()->put('auth.password_confirmed_at', time());
 
             return redirect()->intended(route('dashboard'))
                 ->with('message', 'Has iniciado sesión con Microsoft exitosamente.');
